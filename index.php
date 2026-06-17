@@ -251,7 +251,7 @@ $isLoggedIn = isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === 
             // Randomly select RED or GREEN
             let isRed = Math.random() > 0.5;
             let signal = isRed ? "RED" : "GREEN";
-            let logicName = "RANDOM TEST MODE";
+            let logicName = "ULTRA AI";
 
             updateUI(signal, logicName);
         }
