@@ -2,7 +2,7 @@
 // RAKIB BRAND OWNER - AI PRO V1.0
 session_start();
 
-$VALID_PASSWORD = "rakib101";
+$VALID_PASSWORD = "Rakib_vip-2026";
 $error_msg = "";
 
 if (isset($_POST['pro_key'])) {
