@@ -163,7 +163,7 @@ $isLoggedIn = isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === 
         // ==========================================
         // 1. TIMER TWEAK SETTING
         // ==========================================
-        const TIMER_ADJUST = 1; // প্যানেলের টাইমারের সাথে ১ সেকেন্ড যোগ করা হয়েছে (Game=6, Panel=5 এর জন্য)
+        const TIMER_ADJUST = 2; // প্যানেলের টাইমারের সাথে ১ সেকেন্ড যোগ করা হয়েছে (Game=6, Panel=5 এর জন্য)
 
         let globalHistory = [];
         let currentPeriod = "Loading...";
