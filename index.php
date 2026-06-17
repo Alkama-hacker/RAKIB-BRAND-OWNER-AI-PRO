@@ -92,14 +92,10 @@ $isLoggedIn = isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === 
         .color-red { color: #ff0055; text-shadow: 0 0 15px #ff0055; border-color: #ff0055; }
         .color-green { color: #00ff66; text-shadow: 0 0 15px #00ff66; border-color: #00ff66; }
         .color-violet { color: #b026ff; text-shadow: 0 0 15px #b026ff; border-color: #b026ff; }
-        .color-big { color: #ffaa00; text-shadow: 0 0 15px #ffaa00; border-color: #ffaa00; }
-        .color-small { color: #00f0ff; text-shadow: 0 0 15px #00f0ff; border-color: #00f0ff; }
         .color-error { color: #ff3333; text-shadow: 0 0 15px #ff3333; }
 
         .border-red { border-color: #ff0055; box-shadow: 0 0 12px rgba(255,0,85,0.3); }
         .border-green { border-color: #00ff66; box-shadow: 0 0 12px rgba(0,255,102,0.3); }
-        .border-big { border-color: #ffaa00; box-shadow: 0 0 12px rgba(255,170,0,0.3); }
-        .border-small { border-color: #00f0ff; box-shadow: 0 0 12px rgba(0,240,255,0.3); }
         .border-error { border-color: #ff3333; box-shadow: 0 0 12px rgba(255,51,51,0.3); }
 
         .login-wrap form { display: flex; flex-direction: column; }
@@ -164,14 +160,30 @@ $isLoggedIn = isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === 
 
     <?php if($isLoggedIn): ?>
     <script>
-        const BD_OFFSET = 6 * 60 * 60 * 1000; 
+        // ==========================================
+        // 1. TIMER TWEAK SETTING
+        // ==========================================
+        const TIMER_ADJUST = 1; // প্যানেলের টাইমারের সাথে ১ সেকেন্ড যোগ করা হয়েছে (Game=6, Panel=5 এর জন্য)
+
         let globalHistory = [];
         let currentPeriod = "Loading...";
         let lastFetchedCycle = -1;
 
-        function getBDSeconds() { return Math.floor((Date.now() + BD_OFFSET) / 1000); }
-        function getCountdown() { var mod = (getBDSeconds() % 60) % 30; return mod === 0 ? 30 : 30 - mod; }
-        function getCycleIndex() { return Math.floor(getBDSeconds() / 30); }
+        function getCountdown() { 
+            let seconds = Math.floor(Date.now() / 1000);
+            let mod = seconds % 30;
+            let rem = 30 - mod;
+            
+            // Apply Timer Tweak
+            rem = rem + TIMER_ADJUST;
+            if (rem > 30) rem -= 30;
+            
+            return rem;
+        }
+
+        function getCycleIndex() { 
+            return Math.floor((Date.now() - (TIMER_ADJUST * 1000)) / 30000); 
+        }
 
         function addOne(str) {
             let m = str.match(/(\d+)$/);
@@ -184,9 +196,6 @@ $isLoggedIn = isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === 
             return prefix + s;
         }
 
-        // ==========================================
-        // 100% PURE JS API FETCH (WITH AUTO-DETECT & ERROR DEBUGGING)
-        // ==========================================
         async function fetchGameData() {
             try {
                 let ts = Date.now();
@@ -202,12 +211,9 @@ $isLoggedIn = isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === 
                 let text = await response.text();
                 let data = null;
 
-                // Auto Detect Logic: Is it JSON or Base64?
                 if (text.trim().startsWith('{')) {
-                    // API sent JSON directly
                     data = JSON.parse(text);
                 } else {
-                    // API sent Base64
                     let cleanBase64 = text.replace(/[^A-Za-z0-9+/=]/g, "");
                     let decodedStr = atob(cleanBase64);
                     data = JSON.parse(decodedStr);
@@ -226,8 +232,6 @@ $isLoggedIn = isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === 
                 }
             } catch (error) {
                 console.error("API Error Details:", error);
-                
-                // Show exact error on the panel!
                 let errStr = error.message;
                 if(errStr === "Failed to fetch") errStr = "CORS BLOCKED";
                 
@@ -238,32 +242,16 @@ $isLoggedIn = isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === 
             }
         }
 
+        // ==========================================
+        // 2. RANDOM TEST MODE (ONLY RED/GREEN)
+        // ==========================================
         function analyzePattern() {
-            if(globalHistory.length < 5) return;
+            if(globalHistory.length < 1) return;
             
-            let nums = globalHistory.slice(0, 5); 
-            let sizes = nums.map(n => n >= 5 ? 'BIG' : 'SMALL');
-            let colors = nums.map(n => (n % 2 === 0) ? 'RED' : 'GREEN');
-            
-            let signal = ""; let logicName = "";
-
-            if (sizes[0] === sizes[1] && sizes[1] === sizes[2]) {
-                signal = sizes[0]; logicName = "MOMENTUM (DRAGON)";
-            } else if (colors[0] === colors[1] && colors[1] === colors[2]) {
-                signal = colors[0]; logicName = "COLOR SATURATION";
-            } else if (sizes[0] !== sizes[1] && sizes[1] !== sizes[2] && sizes[2] !== sizes[3] && sizes[0] === sizes[2]) {
-                signal = (sizes[0] === 'BIG') ? 'SMALL' : 'BIG'; logicName = "MIRROR RATIO (ABAB)";
-            } else if (colors[0] !== colors[1] && colors[1] !== colors[2] && colors[2] !== colors[3] && colors[0] === colors[2]) {
-                signal = (colors[0] === 'RED') ? 'GREEN' : 'RED'; logicName = "CHROMATIC (ABAB)";
-            } else if (nums.length >= 3) {
-                let sum3 = nums[0] + nums[1] + nums[2];
-                if (sum3 % 2 === 0) { signal = "GREEN"; logicName = "DELTA DRIFT"; } else { signal = "BIG"; logicName = "DELTA DRIFT"; }
-            } else if (nums.length >= 5) {
-                let sum5 = nums.reduce((a, b) => a + b, 0);
-                if (sum5 % 2 === 0) { signal = "GREEN"; logicName = "FIBONACCI CROSS"; } else { signal = "RED"; logicName = "FIBONACCI CROSS"; }
-            } else {
-                signal = Math.random() > 0.5 ? "BIG" : "SMALL"; logicName = "RANDOM FALLBACK";
-            }
+            // Randomly select RED or GREEN
+            let isRed = Math.random() > 0.5;
+            let signal = isRed ? "RED" : "GREEN";
+            let logicName = "RANDOM TEST MODE";
 
             updateUI(signal, logicName);
         }
@@ -274,14 +262,25 @@ $isLoggedIn = isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === 
             let borderEl = document.getElementById('signalBorder');
             let ballBox = document.getElementById('ballOutput');
 
-            sigEl.innerText = signal; logEl.innerText = logic;
-            sigEl.className = "signal-text"; borderEl.className = "main-signal";
+            sigEl.innerText = signal; 
+            logEl.innerText = logic;
+            sigEl.className = "signal-text"; 
+            borderEl.className = "main-signal";
 
             let b1, b2, cClass;
-            if(signal === 'BIG') { cClass = 'color-big'; borderEl.classList.add('border-big'); b1 = [5,7,9][Math.floor(Math.random()*3)]; b2 = [6,8][Math.floor(Math.random()*2)]; }
-            else if(signal === 'SMALL') { cClass = 'color-small'; borderEl.classList.add('border-small'); b1 = [1,3][Math.floor(Math.random()*2)]; b2 = [0,2,4][Math.floor(Math.random()*3)]; }
-            else if(signal === 'RED') { cClass = 'color-red'; borderEl.classList.add('border-red'); b1 = [2,4,6,8][Math.floor(Math.random()*4)]; b2 = [2,4,6,8][Math.floor(Math.random()*4)]; }
-            else if(signal === 'GREEN') { cClass = 'color-green'; borderEl.classList.add('border-green'); b1 = [1,3,7,9][Math.floor(Math.random()*4)]; b2 = [1,3,7,9][Math.floor(Math.random()*4)]; }
+            
+            // Setup Colors and Balls for Random Mode
+            if(signal === 'RED') { 
+                cClass = 'color-red'; 
+                borderEl.classList.add('border-red'); 
+                b1 = [2,4,6,8][Math.floor(Math.random()*4)]; 
+                b2 = [2,4,6,8][Math.floor(Math.random()*4)]; 
+            } else if(signal === 'GREEN') { 
+                cClass = 'color-green'; 
+                borderEl.classList.add('border-green'); 
+                b1 = [1,3,7,9][Math.floor(Math.random()*4)]; 
+                b2 = [1,3,7,9][Math.floor(Math.random()*4)]; 
+            }
 
             sigEl.classList.add(cClass);
             ballBox.innerHTML = `<div class="ball ${cClass}">${b1}</div><div class="ball ${cClass}">${b2}</div>`;
@@ -290,7 +289,8 @@ $isLoggedIn = isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === 
         fetchGameData();
         setInterval(() => {
             let rem = getCountdown();
-            document.getElementById('timeText').innerText = rem < 10 ? '0'+rem : rem;
+            let displayRem = rem < 10 ? '0' + rem : rem;
+            document.getElementById('timeText').innerText = displayRem;
 
             let currentCycle = getCycleIndex();
             if (lastFetchedCycle !== -1 && currentCycle !== lastFetchedCycle) {
