@@ -165,7 +165,7 @@ $isLoggedIn = isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === 
 
     <?php if($isLoggedIn): ?>
     <script>
-        const TIMER_ADJUST = 1; // Timer sync logic
+        const TIMER_ADJUST = -1; // Timer sync logic
 
         let globalHistory = [];
         let currentPeriod = "Loading...";
